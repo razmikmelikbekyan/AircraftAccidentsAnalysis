@@ -12,8 +12,10 @@ class Accident(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
     status = scrapy.Field()
-    date = scrapy.Field()
-    # weekday = scrapy.Field()
+    weekday = scrapy.Field()
+    day = scrapy.Field()
+    month = scrapy.Field()
+    year = scrapy.Field()
     # time = scrapy.Field()
     aircraft_type = scrapy.Field()
     operator = scrapy.Field()
@@ -25,4 +27,5 @@ class Accident(scrapy.Item):
     # total_occupants = scrapy.Field()
     # total_fatalities = scrapy.Field()
     # aircraft_damage = scrapy.Field()
+    country = scrapy.Field()
     location = scrapy.Field()

@@ -1,14 +1,12 @@
-import logging
-from typing import Dict
+import re
+import time
+from typing import Dict, Tuple
 from urllib.parse import urljoin
 
+import accidents_extraction.items as items
 import scrapy
-from accidents_extraction.items import Accident
-from scrapy.crawler import CrawlerProcess
 from scrapy.linkextractors import LinkExtractor
 from scrapy.spiders import Rule, CrawlSpider
-
-logging.getLogger('scrapy').propagate = False
 
 
 class AccidentsSpider(CrawlSpider):
@@ -64,51 +62,55 @@ class AccidentsSpider(CrawlSpider):
         data['ProbableCause'] = ''.join(cause)
 
         data = self._process_accident_data(data)
-        if not data['date']:
+        if not data['year']:
             return
         else:
             yield data
 
     def _process_accident_data(self, data: Dict):
-        accident = Accident()
+        accident = items.Accident()
         accident['status'] = data['Status']
-        accident['date'] = self._parse_date(data['Date'])
+        accident['weekday'], accident['day'], accident['month'], accident['year'] = (
+            self._parse_date(data['Date'])
+        )
         accident['aircraft_type'] = data['Type']
-        accident['operator'] = self._get_operator(data)
-        accident['location'] = data['Location']
+        accident['operator'] = self._parse_operator(data)
+        accident['country'], accident['location'] = self._parse_location(data['Location'])
         return accident
 
     @staticmethod
-    def _get_operator(data: Dict) -> str:
+    def _parse_date(date_str: str) -> Tuple:
+
+        def get_month(month_str: str) -> int:
+            if len(month_str) == 3:
+                return time.strptime(month_str, "%b").tm_mon
+            else:
+                return time.strptime(month_str, "%B").tm_mon
+
+        date_str = date_str.split()
+        if len(date_str) == 3:
+            weekday, day, month, year = None, None, date_str[-2], date_str[-1]
+            month, year = get_month(month), int(year)
+        elif len(date_str) == 4:
+            [weekday, day, month, year] = date_str
+            day, month, year = int(day), get_month(month), int(year)
+        else:
+            weekday, day, month, year = None, None, None, None
+        return weekday, day, month, year
+
+    @staticmethod
+    def _parse_operator(data: Dict) -> str:
         operator = data.get('Operator', '')
         if not operator:
             operator = data.get('Operating for', '')
-        return operator
+        return operator.encode("ascii", errors="ignore").decode()
 
     @staticmethod
-    def _parse_date(x: str) -> str:
-        mapping = {
-            'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5, 'June': 6,
-            'July': 7, 'August': 8, 'September': 9, 'October': 10, 'November': 11, 'December': 12,
-            'JAN': 1, 'FEB': 2, 'MAR': 3, 'APR': 4, 'MAY': 5, 'JUN': 6,
-            'JUL': 7, 'AUG': 8, 'SEP': 9, 'OCT': 10, 'NOV': 11, 'DEC': 12
-        }
-        x = x.split()
-        if len(x) != 4:
-            return
-        day = x[1] if len(x[1]) == 2 else f'0{x[1]}'
-        month = str(mapping[x[2]]) if mapping[x[2]] >= 10 else f'0{mapping[x[2]]}'
-        year = x[3]
-        return f'{year}-{month}-{day}'
-
-
-if __name__ == "__main__":
-    process = CrawlerProcess(
-        settings={
-            'FEED_FORMAT': 'json',
-            'FEED_URI': 'items.json'
-        }
-    )
-
-    process.crawl(AccidentsSpider)
-    process.start()  # the script will block here until the crawling is finished
+    def _parse_location(location: str) -> Tuple:
+        location = location.encode("ascii", errors="ignore").decode()
+        location = location.rstrip()
+        location = re.sub(r' +', ' ', location)
+        country = location.rstrip("*")[location.rfind("(") + 1:-1]
+        country = country.strip()
+        location = location[: -(len(country) + 4)].strip()
+        return country, location
