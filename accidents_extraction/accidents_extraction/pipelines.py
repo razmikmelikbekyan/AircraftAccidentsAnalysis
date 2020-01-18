@@ -41,31 +41,48 @@ class AccidentsExtractionPipeline(object):
                 exit(1)
 
     def create_table(self):
-        TABLE = (
+        table_data = (
             "CREATE TABLE `accidents` ("
             "  `status` varchar(50),"
+            "  `time` varchar(50),"
             "  `weekday` varchar(20),"
             "  `day` TINYINT,"
             "  `month` TINYINT,"
             "  `year` SMALLINT NOT NULL,"
+            "  `first_flight` SMALLINT,"
+            "  `total_airframe_hrs` INT,"
             "  `aircraft_type` varchar(100) NOT NULL,"
             "  `operator` varchar(100),"
             "  `country` varchar(1000),"
             "  `location` varchar(1000),"
+            "  `phase` varchar(1000),"
+            "  `nature` varchar(1000),"
+            "  `engines` varchar(1000),"
+            "  `narrative` TEXT,"
+            "  `probable_cause` TEXT,"
+            "  `aircraft_damage` varchar(1000),"
+            "  `departure_airport` varchar(1000),"
+            "  `destination_airport` varchar(1000),"
+            "  `crew_occupants` SMALLINT,"
+            "  `crew_fatalities` SMALLINT,"
+            "  `passengers_occupants` SMALLINT,"
+            "  `passengers_fatalities` SMALLINT,"
+            "  `total_occupants` SMALLINT,"
+            "  `total_fatalities` SMALLINT,"
             "  `id` INT(10) NOT NULL AUTO_INCREMENT,"
             "  PRIMARY KEY (`id`)"
             ") ENGINE=InnoDB"
         )
         try:
-            print("Creating table:")
-            self.cursor.execute(TABLE)
+            print("Creating table: 'accidents'.")
+            self.cursor.execute(table_data)
         except mysql.connector.Error as err:
             if err.errno == errorcode.ER_TABLE_EXISTS_ERROR:
-                print("already exists.")
+                print("Table 'accidents' already exists.")
             else:
                 print(err.msg)
         else:
-            print("OK")
+            print("Table 'accidents' successfully created.")
 
     @classmethod
     def from_crawler(cls, crawler):

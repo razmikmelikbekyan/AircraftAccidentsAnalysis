@@ -23,7 +23,6 @@ class AccidentsSpider(CrawlSpider):
                 restrict_xpaths='//*[@id="contentcolumn"]/div/p[3]/a',
                 restrict_css='a[href*=Year]',
                 deny=r'.+lang=[a-z]{2}$',
-                restrict_text='2015'
 
             ),
             callback='parse_year',
@@ -62,26 +61,47 @@ class AccidentsSpider(CrawlSpider):
         data['ProbableCause'] = ''.join(cause)
 
         data = self._process_accident_data(data)
-        if not data['year']:
+        if not data or not data['year']:
             return
         else:
             yield data
 
     def _process_accident_data(self, data: Dict):
         accident = items.Accident()
-        accident['status'] = data['Status']
+        if 'Date' not in data:
+            return
+        accident['status'] = data.get('Status', None)
+        accident['time'] = data.get('Time', None)
         accident['weekday'], accident['day'], accident['month'], accident['year'] = (
             self._parse_date(data['Date'])
         )
         accident['aircraft_type'] = data['Type']
-        accident['operator'] = self._parse_operator(data)
+        accident['operator'] = self._correct_str(self._parse_operator(data))
         accident['country'], accident['location'] = self._parse_location(data['Location'])
+        accident['phase'] = self._correct_str(data.get('Phase', 'Unknown (UNK)'))
+        accident['nature'] = self._parse_nature(data.get('Nature', 'Unknown'))
+        accident['aircraft_damage'] = self._correct_str(data.get('Aircraft damage', 'Missing'))
+        accident['narrative'] = self._correct_str(data.get('Narrative', None))
+        accident['probable_cause'] = self._correct_str(data.get('ProbableCause', None))
+        accident['departure_airport'] = self._correct_str(data.get('Departure airport', 'Unknown'))
+        accident['destination_airport'] = self._correct_str(
+            data.get('Destination airport', 'Unknown')
+        )
+        accident['first_flight'] = self._parse_first_flight(data.get('First flight', None))
+        accident['engines'] = self._correct_str(data.get('Engines', None))
+        accident['total_airframe_hrs'] = self._correct_str(data.get('Total airframe hrs', None))
+
+        accident.update(self._parse_people_data(data))
+
         return accident
 
     @staticmethod
     def _parse_date(date_str: str) -> Tuple:
 
         def get_month(month_str: str) -> int:
+            if 'xx' in month_str.lower():
+                return None
+
             if len(month_str) == 3:
                 return time.strptime(month_str, "%b").tm_mon
             else:
@@ -107,10 +127,61 @@ class AccidentsSpider(CrawlSpider):
 
     @staticmethod
     def _parse_location(location: str) -> Tuple:
-        location = location.encode("ascii", errors="ignore").decode()
-        location = location.rstrip()
-        location = re.sub(r' +', ' ', location)
+        location = AccidentsSpider._correct_str(location)
         country = location.rstrip("*")[location.rfind("(") + 1:-1]
         country = country.strip()
         location = location[: -(len(country) + 4)].strip()
         return country, location
+
+    @staticmethod
+    def _parse_nature(nature: str) -> str:
+        nature = AccidentsSpider._correct_str(nature)
+        if not nature or nature == '-':
+            return 'Unknown'
+        else:
+            return nature
+
+    @staticmethod
+    def _parse_people_data(data: Dict) -> Dict:
+        output = {}
+        for name in ('Crew', 'Passengers', 'Total'):
+            name_data = list(map(int, re.findall(r'\d+', data[name])))
+            occupants = (name_data[0:1] or (None,))[0]
+            fatalities = (name_data[1:2] or (None,))[0]
+
+            if fatalities and not occupants:
+                occupants = fatalities
+
+            output[f'{name.lower()}_occupants'] = occupants
+            output[f'{name.lower()}_fatalities'] = fatalities
+        return output
+
+    @staticmethod
+    def _parse_first_flight(first_flight: str) -> int:
+        first_flight = AccidentsSpider._correct_str(first_flight)
+        if not first_flight:
+            return None
+        else:
+            try:
+                return int(first_flight[:4])
+            except ValueError:
+                return None
+
+    @staticmethod
+    def _parse_airframe_hrs(hours: str) -> int:
+        hours = AccidentsSpider._correct_str(hours)
+        if not hours:
+            return None
+        else:
+            try:
+                return int(hours)
+            except ValueError:
+                return None
+
+    @staticmethod
+    def _correct_str(x: str) -> str:
+        if not x:
+            return None
+        x = x.encode("ascii", errors="ignore").decode()
+        x = re.sub(r' +', ' ', x.rstrip()).strip()
+        return x
