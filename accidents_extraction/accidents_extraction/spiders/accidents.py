@@ -8,6 +8,8 @@ import scrapy
 from scrapy.linkextractors import LinkExtractor
 from scrapy.spiders import Rule, CrawlSpider
 
+from logger import logger
+
 
 class AccidentsSpider(CrawlSpider):
     name = 'accidents'
@@ -23,7 +25,7 @@ class AccidentsSpider(CrawlSpider):
                 restrict_xpaths='//*[@id="contentcolumn"]/div/p[3]/a',
                 restrict_css='a[href*=Year]',
                 deny=r'.+lang=[a-z]{2}$',
-
+                # process_value=lambda x: x if x.endswith('2020') or x.endswith('2019') else None
             ),
             callback='parse_year',
             follow=True,
@@ -32,8 +34,17 @@ class AccidentsSpider(CrawlSpider):
 
     def parse_year(self, response):
         # extracting table rows
-        urls = response.xpath('//*[@id="contentcolumnfull"]/div/table//tr')  # all rows
-        urls = urls.xpath('td[1]').css('a::attr(href)').getall()  # first column (clickable date)
+        urls = response.xpath('//*[@id="contentcolumnfull"]/div')
+
+        # first column (clickable date)
+        urls = urls.css('table').xpath('tr/td[1]').css('a::attr(href)').getall()
+
+        year = re.findall('Year=[0-9]{4}', response.url)[0][-4:]
+        if not urls:
+            logger.warn(f'For year={year} no accidents found.')
+        else:
+            logger.info(f'For year={year} {len(urls)} accidents have been found.')
+
         for url in urls:
             url = urljoin(self.base_url, url)
 
