@@ -37,3 +37,18 @@ class Accident(scrapy.Item):
     destination_airport = scrapy.Field()
     engines = scrapy.Field()
     total_airframe_hrs = scrapy.Field()
+
+
+class Aircraft(scrapy.Item):
+    aircraft_type = scrapy.Field()
+    manufacturer = scrapy.Field()
+    country = scrapy.Field()
+    icao_type_designator = scrapy.Field()
+    first_flight = scrapy.Field()
+    production_ended = scrapy.Field()
+    production_total = scrapy.Field()
+    propulsion = scrapy.Field()
+    maximum_number_of_passengers = scrapy.Field()
+    maximum_take_off_mass = scrapy.Field()
+    mass_unit = scrapy.Field()
+    icao_mass_group = scrapy.Field()

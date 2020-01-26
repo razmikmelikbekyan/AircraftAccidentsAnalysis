@@ -1,29 +1,26 @@
 import argparse
-import json
 import logging
 import os
-from typing import Dict
 
 import accidents_extraction.spiders.accidents as accidents
+import accidents_extraction.spiders.aircraft as aircraft
 from scrapy.crawler import CrawlerProcess
 from scrapy.settings import Settings
+
+from utils import read_json
 
 logging.getLogger('scrapy').propagate = False
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--data-type', choices=['accident', 'aircraft'], required=True,
+                        help='Defines to scrap "accident" or "aircraft" data.')
     parser.add_argument('--output-type', choices=['mysql_db', 'json'], required=True)
     parser.add_argument('--db-config', help='Config json file for MySQL database.')
     parser.add_argument('--output-json-path',
                         help='The output json path, if the output type is "json".')
     return parser.parse_args()
-
-
-def read_json(json_path: str) -> Dict:
-    """Reads JSON file."""
-    with open(json_path, 'r') as infile:
-        return json.load(infile)
 
 
 settings = Settings()
@@ -53,5 +50,8 @@ if __name__ == "__main__":
             settings=settings
         )
 
-    process.crawl(accidents.AccidentsSpider)
+    if args.data_type == 'accident':
+        process.crawl(accidents.AccidentsSpider)
+    else:
+        process.crawl(aircraft.AircraftSpider)
     process.start()  # the script will block here until the crawling is finished

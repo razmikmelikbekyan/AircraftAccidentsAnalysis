@@ -13,11 +13,19 @@ from logger import logger
 
 class AccidentsSpider(CrawlSpider):
     name = 'accidents'
+    base_url = 'https://aviation-safety.net/database/'
+
+    custom_settings = {
+        'LOG_ENABLED': False,
+        'ITEM_PIPELINES': {
+            'accidents_extraction.pipelines.AccidentsExtractionPipeline': 300,
+        }
+
+    }
+
     start_urls = [
         'https://aviation-safety.net/database/',
     ]
-    custom_settings = {'LOG_ENABLED': False}
-    base_url = 'https://aviation-safety.net/database/'
 
     rules = [
         Rule(
@@ -27,12 +35,12 @@ class AccidentsSpider(CrawlSpider):
                 deny=r'.+lang=[a-z]{2}$',
                 # process_value=lambda x: x if x.endswith('2020') or x.endswith('2019') else None
             ),
-            callback='parse_year',
+            callback='parse_accidents_for_year',
             follow=True,
         )
     ]
 
-    def parse_year(self, response):
+    def parse_accidents_for_year(self, response):
         # extracting table rows
         urls = response.xpath('//*[@id="contentcolumnfull"]/div')
 
@@ -107,6 +115,14 @@ class AccidentsSpider(CrawlSpider):
         return accident
 
     @staticmethod
+    def _correct_str(x: str) -> str:
+        if not x:
+            return None
+        x = x.encode("ascii", errors="ignore").decode()
+        x = re.sub(r' +', ' ', x.rstrip()).strip()
+        return x
+
+    @staticmethod
     def _parse_date(date_str: str) -> Tuple:
 
         def get_month(month_str: str) -> int:
@@ -136,17 +152,17 @@ class AccidentsSpider(CrawlSpider):
             operator = data.get('Operating for', '')
         return operator.encode("ascii", errors="ignore").decode()
 
-    @staticmethod
-    def _parse_location(location: str) -> Tuple:
-        location = AccidentsSpider._correct_str(location)
+    @classmethod
+    def _parse_location(cls, location: str) -> Tuple:
+        location = cls._correct_str(location)
         country = location.rstrip("*")[location.rfind("(") + 1:-1]
         country = country.strip()
         location = location[: -(len(country) + 4)].strip()
         return country, location
 
-    @staticmethod
-    def _parse_nature(nature: str) -> str:
-        nature = AccidentsSpider._correct_str(nature)
+    @classmethod
+    def _parse_nature(cls, nature: str) -> str:
+        nature = cls._correct_str(nature)
         if not nature or nature == '-':
             return 'Unknown'
         else:
@@ -167,9 +183,9 @@ class AccidentsSpider(CrawlSpider):
             output[f'{name.lower()}_fatalities'] = fatalities
         return output
 
-    @staticmethod
-    def _parse_first_flight(first_flight: str) -> int:
-        first_flight = AccidentsSpider._correct_str(first_flight)
+    @classmethod
+    def _parse_first_flight(cls, first_flight: str) -> int:
+        first_flight = cls._correct_str(first_flight)
         if not first_flight:
             return None
         else:
@@ -178,9 +194,9 @@ class AccidentsSpider(CrawlSpider):
             except ValueError:
                 return None
 
-    @staticmethod
-    def _parse_airframe_hrs(hours: str) -> int:
-        hours = AccidentsSpider._correct_str(hours)
+    @classmethod
+    def _parse_airframe_hrs(cls, hours: str) -> int:
+        hours = cls._correct_str(hours)
         if not hours:
             return None
         else:
@@ -188,11 +204,3 @@ class AccidentsSpider(CrawlSpider):
                 return int(hours)
             except ValueError:
                 return None
-
-    @staticmethod
-    def _correct_str(x: str) -> str:
-        if not x:
-            return None
-        x = x.encode("ascii", errors="ignore").decode()
-        x = re.sub(r' +', ' ', x.rstrip()).strip()
-        return x
