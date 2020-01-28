@@ -6,12 +6,12 @@ import mysql.connector
 import pandas as pd
 
 
-def sql_table_to_pandas(db_config_path: str, table_name: str) -> pd.DataFrame:
+def sql_table_to_pandas(db_config_path: str, table_name: str, **kwargs) -> pd.DataFrame:
     with open(db_config_path, 'r') as infile:
         db_config = json.load(infile)
 
     cnx = mysql.connector.connect(**db_config)
-    return pd.read_sql(f"SELECT * FROM {table_name}", cnx)
+    return pd.read_sql(f"SELECT * FROM {table_name}", cnx, **kwargs)
 
 
 def str2str_match_ratio(s_1: str, s_2: str) -> float:

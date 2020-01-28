@@ -25,5 +25,10 @@ file_handler.setFormatter(formatter)
 file_handler.setLevel(logging.INFO)
 file_handler.addFilter(logging.Filter(name='root'))
 
+consoleHandler = logging.StreamHandler()
+consoleHandler.setLevel(logging.INFO)
+consoleHandler.setFormatter(formatter)
+logger.addHandler(consoleHandler)
+
 logger.addHandler(file_handler)
 logger.info("Encountered INFO case")

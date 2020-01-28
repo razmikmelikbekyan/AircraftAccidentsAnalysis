@@ -46,11 +46,11 @@ class AccidentsExtractionPipeline(object):
         table_data = (
             f"CREATE TABLE `{self.table_name}` ("
             "  `status` varchar(50),"
-            "  `time` varchar(50),"
+            "  `time` TIME,"
             "  `weekday` varchar(20),"
             "  `day` TINYINT,"
             "  `month` TINYINT,"
-            "  `year` SMALLINT NOT NULL,"
+            "  `year` SMALLINT,"
             "  `first_flight` SMALLINT,"
             "  `total_airframe_hrs` INT,"
             "  `aircraft_type` varchar(100) NOT NULL,"
