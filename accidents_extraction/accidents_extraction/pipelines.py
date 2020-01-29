@@ -5,7 +5,8 @@
 # Don't forget to add your pipeline to the ITEM_PIPELINES setting
 # See: https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 import mysql.connector
-from mysql.connector import errorcode
+
+from .mysql_utils import create_db, create_table
 
 
 class AccidentsExtractionPipeline(object):
@@ -21,26 +22,6 @@ class AccidentsExtractionPipeline(object):
         self.table_name = 'accidents'
 
         # Implement from_crawler method and get database connection info from settings.py
-
-    def create_db(self):
-        try:
-            self.cursor.execute("USE {}".format(self.database))
-            print("Successfully using {} database.".format(self.database))
-        except mysql.connector.Error as err:
-            print("Database {} does not exists.".format(self.database))
-            if err.errno == errorcode.ER_BAD_DB_ERROR:
-                try:
-                    self.cursor.execute(
-                        "CREATE DATABASE {} DEFAULT CHARACTER SET 'utf8'".format(self.database)
-                    )
-                except mysql.connector.Error as err:
-                    print("Failed creating database: {}".format(err))
-                    exit(1)
-                print("Database {} created successfully.".format(self.database))
-                self.conx.database = self.database
-            else:
-                print(err)
-                exit(1)
 
     def create_table(self):
         table_data = (
@@ -75,16 +56,7 @@ class AccidentsExtractionPipeline(object):
             "  PRIMARY KEY (`id`)"
             ") ENGINE=InnoDB"
         )
-        try:
-            print(f"Creating table: '{self.table_name}'.")
-            self.cursor.execute(table_data)
-        except mysql.connector.Error as err:
-            if err.errno == errorcode.ER_TABLE_EXISTS_ERROR:
-                print(f"Table '{self.table_name}' already exists.")
-            else:
-                print(err.msg)
-        else:
-            print(f"Table '{self.table_name}' successfully created.")
+        create_table(self.cursor, self.table_name, table_data)
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -95,7 +67,7 @@ class AccidentsExtractionPipeline(object):
 
     # Connect to the database when the spider starts
     def open_spider(self, spider):
-        self.create_db()
+        create_db(self.conx, self.cursor, self.database)
         self.create_table()
 
     # Insert data records into the database (one item at a time)
@@ -133,26 +105,6 @@ class AircraftExtractionPipeline(object):
 
         # Implement from_crawler method and get database connection info from settings.py
 
-    def create_db(self):
-        try:
-            self.cursor.execute("USE {}".format(self.database))
-            print("Successfully using {} database.".format(self.database))
-        except mysql.connector.Error as err:
-            print("Database {} does not exists.".format(self.database))
-            if err.errno == errorcode.ER_BAD_DB_ERROR:
-                try:
-                    self.cursor.execute(
-                        "CREATE DATABASE {} DEFAULT CHARACTER SET 'utf8'".format(self.database)
-                    )
-                except mysql.connector.Error as err:
-                    print("Failed creating database: {}".format(err))
-                    exit(1)
-                print("Database {} created successfully.".format(self.database))
-                self.conx.database = self.database
-            else:
-                print(err)
-                exit(1)
-
     def create_table(self):
         table_data = (
             f"CREATE TABLE `{self.table_name}` ("
@@ -171,16 +123,7 @@ class AircraftExtractionPipeline(object):
             "  PRIMARY KEY (`aircraft_type`)"
             ") ENGINE=InnoDB"
         )
-        try:
-            print(f"Creating table: '{self.table_name}'.")
-            self.cursor.execute(table_data)
-        except mysql.connector.Error as err:
-            if err.errno == errorcode.ER_TABLE_EXISTS_ERROR:
-                print(f"Table '{self.table_name}' already exists.")
-            else:
-                print(err.msg)
-        else:
-            print(f"Table '{self.table_name}' successfully created.")
+        create_table(self.cursor, self.table_name, table_data)
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -191,7 +134,7 @@ class AircraftExtractionPipeline(object):
 
     # Connect to the database when the spider starts
     def open_spider(self, spider):
-        self.create_db()
+        create_db(self.conx, self.cursor, self.database)
         self.create_table()
 
     # Insert data records into the database (one item at a time)

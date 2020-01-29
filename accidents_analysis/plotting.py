@@ -12,16 +12,21 @@ def plot_countplot(df: pd.DataFrame,
                    figsize: Tuple[int, int] = (14, 8),
                    palette: Dict = None,
                    color: str or List[str] = "darkorange",
+                   ylims: Tuple = None,
                    output_path: str = None):
-    """
-    Plots count plot.
-    """
+    """Plots count plot."""
     title = title if title else f'Count of {x_column}'
 
     plt.figure(figsize=figsize)
     plt.title(title, fontweight='bold', fontsize=16)
-    splot = sns.countplot(x=x_column, hue=hue_column, data=df, palette=palette, color=color)
-    sns.despine()
+    splot = sns.countplot(
+        x=x_column,
+        hue=hue_column,
+        data=df.sort_values(by=x_column),
+        palette=palette,
+        color=color
+    )
+
     for p in splot.patches:
         splot.annotate(
             f'{p.get_height():,.0f}',
@@ -38,6 +43,10 @@ def plot_countplot(df: pd.DataFrame,
     plt.xlabel(x_column, fontsize=12, fontweight='bold')
     plt.ylabel('count', fontsize=12, fontweight='bold')
 
+    if ylims:
+        plt.ylim(*ylims)
+
+    sns.despine()
     if output_path:
         plt.savefig(output_path, bbox_inches='tight')
 
@@ -54,6 +63,7 @@ def plot_aggregated_barplot(df: pd.DataFrame,
                             color: str or List[str] = 'darkorange',
                             title: str = None,
                             figsize: Tuple[int, int] = (14, 8),
+                            ylims: Tuple = None,
                             output_path: str = None):
     """Plots aggregated numerical column versus categories."""
 
@@ -105,6 +115,9 @@ def plot_aggregated_barplot(df: pd.DataFrame,
     plt.ylabel(y_column, fontsize=12, fontweight='bold')
     if output_path:
         plt.savefig(output_path, bbox_inches='tight')
+
+    if ylims:
+        plt.ylim(*ylims)
 
     plt.tight_layout()
     plt.show()

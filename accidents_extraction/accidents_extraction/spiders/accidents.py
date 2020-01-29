@@ -100,7 +100,9 @@ class AccidentsSpider(CrawlSpider):
         accident['country'], accident['location'] = self._parse_location(data['Location'])
         accident['phase'] = self._parse_phase(data.get('Phase', 'Unknown'))
         accident['nature'] = self._parse_nature(data.get('Nature', 'Unknown'))
-        accident['aircraft_damage'] = data.get('Aircraft damage', 'Unknown')
+        accident['aircraft_damage'] = self._parse_aircraft_damage(
+            data.get('Aircraft damage', 'Unknown')
+        )
         accident['narrative'] = data.get('Narrative', None)
         accident['probable_cause'] = data.get('ProbableCause', None)
         accident['departure_airport'] = self._parse_airport(
@@ -246,24 +248,29 @@ class AccidentsSpider(CrawlSpider):
             output[f'{name.lower()}_fatalities'] = fatalities
         return output
 
-    @classmethod
-    def _parse_first_flight(cls, first_flight: str) -> int:
-        first_flight = cls._correct_str(first_flight)
-        if not first_flight:
+    @staticmethod
+    def _parse_first_flight(x: str) -> int:
+        if not x:
             return
         else:
             try:
-                return int(first_flight[:4])
+                return int(x[:4])
             except ValueError:
                 return
 
-    @classmethod
-    def _parse_airframe_hrs(cls, hours: str) -> int:
-        hours = cls._correct_str(hours)
-        if not hours:
+    @staticmethod
+    def _parse_airframe_hrs(x: str) -> int:
+        if not x:
             return
         else:
             try:
-                return int(hours)
+                return int(x)
             except ValueError:
                 return
+
+    @staticmethod
+    def _parse_aircraft_damage(x: str) -> str:
+        if not x or x == 'Missing':
+            return 'Unknown'
+        else:
+            return x
