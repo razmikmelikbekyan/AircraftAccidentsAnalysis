@@ -13,33 +13,29 @@ def plot_countplot(df: pd.DataFrame,
                    palette: Dict = None,
                    color: str or List[str] = "darkorange",
                    ylims: Tuple = None,
+                   ticks_rotation: int = 90,
+                   ticks_fontsize: int = 10,
                    output_path: str = None):
     """Plots count plot."""
     title = title if title else f'Count of {x_column}'
 
     plt.figure(figsize=figsize)
     plt.title(title, fontweight='bold', fontsize=16)
-    splot = sns.countplot(
-        x=x_column,
-        hue=hue_column,
-        data=df.sort_values(by=x_column),
-        palette=palette,
-        color=color
-    )
-
+    splot = sns.countplot(x=x_column, hue=hue_column, data=df, palette=palette, color=color)
     for p in splot.patches:
         splot.annotate(
             f'{p.get_height():,.0f}',
             (p.get_x() + p.get_width() / 2., p.get_height()),
             ha='center',
+            va='center' if ticks_rotation == 0 else 'bottom',
             xytext=(0, 10),
             textcoords='offset points',
-            rotation=90,
             fontweight='bold',
-            fontsize=9
+            rotation=ticks_rotation,
+            fontsize=ticks_fontsize
         )
-    plt.xticks(rotation=90, fontsize=10, fontweight='bold')
-    plt.yticks(fontsize=10, fontweight='bold')
+    plt.xticks(rotation=ticks_rotation, fontsize=ticks_fontsize, fontweight='bold')
+    plt.yticks(fontsize=ticks_fontsize, fontweight='bold')
     plt.xlabel(x_column, fontsize=12, fontweight='bold')
     plt.ylabel('count', fontsize=12, fontweight='bold')
 
@@ -64,6 +60,8 @@ def plot_aggregated_barplot(df: pd.DataFrame,
                             title: str = None,
                             figsize: Tuple[int, int] = (14, 8),
                             ylims: Tuple = None,
+                            ticks_rotation: int = 90,
+                            ticks_fontsize: int = 10,
                             output_path: str = None):
     """Plots aggregated numerical column versus categories."""
 
@@ -102,15 +100,16 @@ def plot_aggregated_barplot(df: pd.DataFrame,
             f'{p.get_height():,.0f}',
             (p.get_x() + p.get_width() / 2., p.get_height()),
             ha='center',
+            va='center' if ticks_rotation == 0 else 'bottom',
             xytext=(0, 10),
             textcoords='offset points',
-            rotation=90,
             fontweight='bold',
-            fontsize=9
+            rotation=ticks_rotation,
+            fontsize=ticks_fontsize
         )
 
-    plt.xticks(rotation=90, fontsize=10, fontweight='bold')
-    plt.yticks(fontsize=10, fontweight='bold')
+    plt.xticks(rotation=ticks_rotation, fontsize=ticks_fontsize, fontweight='bold')
+    plt.yticks(fontsize=ticks_fontsize, fontweight='bold')
     plt.xlabel(x_column, fontsize=12, fontweight='bold')
     plt.ylabel(y_column, fontsize=12, fontweight='bold')
     if output_path:
@@ -131,6 +130,8 @@ def plot_lineplot(df: pd.DataFrame,
                   color: str or List[str] = 'darkorange',
                   title: str = None,
                   figsize: Tuple[int, int] = (14, 8),
+                  ticks_rotation: int = 90,
+                  ticks_fontsize: int = 10,
                   output_path: str = None):
     title = title if title else f'{y_column} over {x_column}'
 
@@ -146,12 +147,72 @@ def plot_lineplot(df: pd.DataFrame,
     )
     sns.despine()
 
-    plt.xticks(rotation=90, fontsize=10, fontweight='bold')
-    plt.yticks(fontsize=10, fontweight='bold')
+    plt.xticks(rotation=ticks_rotation, fontsize=ticks_fontsize, fontweight='bold')
+    plt.yticks(fontsize=ticks_fontsize, fontweight='bold')
     plt.xlabel(x_column, fontsize=12, fontweight='bold')
     plt.ylabel(y_column, fontsize=12, fontweight='bold')
+    plt.grid(True, axis='both', linestyle='--', color='gray')
+
     if output_path:
         plt.savefig(output_path, bbox_inches='tight')
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_normalised_barplot(df: pd.DataFrame,
+                            x_column: str,
+                            hue_column: str,
+                            title: str = None,
+                            figsize: Tuple[int, int] = (14, 8),
+                            palette: Dict = None,
+                            legend: bool = True,
+                            ylims: Tuple = None,
+                            ticks_rotation: int = 90,
+                            ticks_fontsize: int = 10,
+                            output_path: str = None):
+    """
+    Plots percentage of every category from hue_column in division of categories from x_column.
+    """
+    title = title if title else f'percentage of {hue_column} in {x_column}'
+    x, y, hue = x_column, "percentage", hue_column
+    normalized_df = (df[hue_column]
+                     .groupby(df[x])
+                     .value_counts(normalize=True)
+                     .rename(y)
+                     .reset_index())
+
+    plt.figure(figsize=figsize)
+    plt.title(title, fontweight='bold', fontsize=16)
+    ax = sns.barplot(x=x, y=y, hue=hue, data=normalized_df, palette=palette)
+    for p in ax.patches:
+        ax.annotate(
+            format(p.get_height(), '.2f'),
+            (p.get_x() + p.get_width() / 2., p.get_height()),
+            ha='center',
+            va='center' if ticks_rotation == 0 else 'bottom',
+            xytext=(0, 10),
+            textcoords='offset points',
+            fontweight='bold',
+            rotation=ticks_rotation,
+            fontsize=ticks_fontsize
+        )
+    sns.despine()
+
+    if legend:
+        plt.legend(loc="upper right", bbox_to_anchor=(1, 1))
+    else:
+        ax.get_legend().set_visible(False)
+
+    if output_path:
+        plt.savefig(output_path, bbox_inches='tight')
+
+    plt.xticks(rotation=ticks_rotation, fontsize=ticks_fontsize, fontweight='bold')
+    plt.yticks(fontsize=ticks_fontsize, fontweight='bold')
+    plt.xlabel(x, fontsize=12, fontweight='bold')
+    plt.ylabel(y, fontsize=12, fontweight='bold')
+
+    if ylims:
+        plt.ylim(*ylims)
 
     plt.tight_layout()
     plt.show()
@@ -193,46 +254,6 @@ def plot_distplot(df: pd.DataFrame,
     plt.title(f'Density Plot vs {hue_column}' if hue_column else 'Density Plot')
     plt.xlabel(x_column)
     plt.ylabel('Density')
-    if output_path:
-        plt.savefig(output_path, bbox_inches='tight')
-    plt.show()
-
-
-def plot_normalised_barplot(df: pd.DataFrame,
-                            x_column: str,
-                            hue_column: str,
-                            title: str = None,
-                            figsize: Tuple[int, int] = (14, 8),
-                            palette: Dict = None,
-                            legend: bool = True,
-                            output_path: str = None):
-    """
-    Plots percentage of every category from hue_column in division of categories from x_column.
-    """
-    title = title if title else f'percentage of {hue_column} in {x_column}'
-    x, y, hue = x_column, "percentage", hue_column
-    normalized_df = (df[hue]
-                     .groupby(df[x])
-                     .value_counts(normalize=True)
-                     .rename(y)
-                     .reset_index())
-
-    plt.figure(figsize=figsize)
-    plt.title(title, fontweight='bold', fontsize=16)
-    ax = sns.barplot(x=x, y=y, hue=hue, data=normalized_df, palette=palette)
-    for p in ax.patches:
-        ax.annotate(
-            format(p.get_height(), '.2f'),
-            (p.get_x() + p.get_width() / 2., p.get_height()),
-            ha='center',
-            va='center',
-            xytext=(0, 10),
-            textcoords='offset points'
-        )
-    if legend:
-        plt.legend(loc="upper right", bbox_to_anchor=(1, 1))
-    else:
-        ax.get_legend().set_visible(False)
     if output_path:
         plt.savefig(output_path, bbox_inches='tight')
     plt.show()
