@@ -52,6 +52,7 @@ class AccidentsExtractionPipeline(object):
             "  `passengers_fatalities` SMALLINT,"
             "  `total_occupants` SMALLINT,"
             "  `total_fatalities` SMALLINT,"
+            "  `ground_fatalities` SMALLINT,"
             "  `id` INT(10) NOT NULL AUTO_INCREMENT,"
             "  PRIMARY KEY (`id`)"
             ") ENGINE=InnoDB"
@@ -62,7 +63,7 @@ class AccidentsExtractionPipeline(object):
     def from_crawler(cls, crawler):
         db_settings = crawler.settings.getdict("DB_SETTINGS")
         if not db_settings:
-            raise Exception('Not configured')
+            return
         return cls(**db_settings)
 
     # Connect to the database when the spider starts
@@ -108,8 +109,9 @@ class AircraftExtractionPipeline(object):
     def create_table(self):
         table_data = (
             f"CREATE TABLE `{self.table_name}` ("
-            "  `aircraft_type` varchar(200) NOT NULL,"
+            "  `aircraft_main_model` varchar(200) NOT NULL,"
             "  `manufacturer` varchar(200),"
+            "  `series` varchar(1500),"
             "  `country` varchar(500),"
             "  `icao_type_designator` varchar(500),"
             "  `first_flight` SMALLINT,"
@@ -120,7 +122,7 @@ class AircraftExtractionPipeline(object):
             "  `maximum_take_off_mass` INT,"
             "  `mass_unit` varchar(200),"
             "  `icao_mass_group` SMALLINT,"
-            "  PRIMARY KEY (`aircraft_type`)"
+            "  PRIMARY KEY (`aircraft_main_model`)"
             ") ENGINE=InnoDB"
         )
         create_table(self.cursor, self.table_name, table_data)
@@ -129,7 +131,7 @@ class AircraftExtractionPipeline(object):
     def from_crawler(cls, crawler):
         db_settings = crawler.settings.getdict("DB_SETTINGS")
         if not db_settings:
-            raise Exception('Not configured')
+            return
         return cls(**db_settings)
 
     # Connect to the database when the spider starts

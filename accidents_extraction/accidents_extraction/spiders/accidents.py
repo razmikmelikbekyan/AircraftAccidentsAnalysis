@@ -34,7 +34,7 @@ class AccidentsSpider(CrawlSpider):
                 restrict_xpaths='//*[@id="contentcolumn"]/div/p[3]/a',
                 restrict_css='a[href*=Year]',
                 deny=r'.+lang=[a-z]{2}$',
-                # process_value=lambda x: x if x.endswith('2020') or x.endswith('2019') else None
+                # process_value=lambda x: x if '2001' in x else None
             ),
             callback='parse_accidents_for_year',
             follow=True,
@@ -220,7 +220,6 @@ class AccidentsSpider(CrawlSpider):
     def _parse_people_data(data: Dict) -> Dict:
         output = {}
         for name in ('Crew', 'Passengers', 'Total'):
-
             try:
                 [data_1, data_2] = [x.strip() for x in data[name].split('/')]
                 if 'Occupants' in data_1 and 'Fatalities' in data_2:
@@ -246,6 +245,14 @@ class AccidentsSpider(CrawlSpider):
 
             output[f'{name.lower()}_occupants'] = occupants
             output[f'{name.lower()}_fatalities'] = fatalities
+
+        ground_fatalities = data.get('Ground casualties')
+        if ground_fatalities:
+            if 'Fatalities' in ground_fatalities:
+                ground_fatalities = list(map(int, re.findall(r'\d+', ground_fatalities)))
+                ground_fatalities = (ground_fatalities[0:1] or (None,))[0]
+        output['ground_fatalities'] = ground_fatalities
+
         return output
 
     @staticmethod

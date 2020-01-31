@@ -1,5 +1,5 @@
 import re
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 
 import accidents_extraction.items as items
 import scrapy
@@ -53,7 +53,7 @@ class AircraftSpider(CrawlSpider):
         if not aircraft_type:
             return
 
-        data['aircraft_type'] = aircraft_type.replace(' specs', '')
+        data['aircraft_main_model'] = aircraft_type.replace(' specs', '')
 
         table_rows = response.xpath('//*[@id="contentcolumnfull"]/div/table//tr')
         for row in table_rows:
@@ -61,7 +61,10 @@ class AircraftSpider(CrawlSpider):
             key = '_'.join(all_text[0][:-1].replace(':', '').replace('-', '_').split()).lower()
             if key not in items.Aircraft.fields:
                 continue
-            value = self._correct_str(' '.join(all_text[1:]))
+            if key == 'series':
+                value = [self._correct_str(x) for x in all_text[1:]]
+            else:
+                value = self._correct_str(' '.join(all_text[1:]))
             data[key] = value
 
         yield self._process_aircraft_data(data)
@@ -76,10 +79,11 @@ class AircraftSpider(CrawlSpider):
 
     def _process_aircraft_data(self, data: Dict):
         aircraft = items.Aircraft()
-        aircraft['aircraft_type'] = data['aircraft_type']
+        aircraft['aircraft_main_model'] = data['aircraft_main_model']
         aircraft['manufacturer'] = data.get('manufacturer')
         aircraft['country'] = data.get('country')
         aircraft['icao_type_designator'] = data.get('icao_type_designator')
+        aircraft['series'] = self._parse_series(aircraft['manufacturer'], data.get('series'))
         aircraft['first_flight'] = self._parse_first_flight(data.get('first_flight'))
         aircraft['production_ended'] = self._parse_production_ended(data.get('production_ended'))
         aircraft['production_total'] = self._parse_production_total(data.get('production_total'))
@@ -129,6 +133,18 @@ class AircraftSpider(CrawlSpider):
                 return int(production_total)
             else:
                 return production_total
+
+    @classmethod
+    def _parse_series(cls, manufacturer, series_data: List[str]) -> str:
+        if not series_data:
+            return
+
+        if len(series_data) == 1:
+            series_data = [f'{manufacturer} {x}' for x in series_data[0].split(',')]
+        else:
+            # series_data = [x for x in series_data if ':' in x]
+            series_data = [f'{manufacturer} {x.split(":")[0]}' for x in series_data if ':' in x]
+        return '$$'.join([cls._correct_str(x) for x in series_data])
 
     @staticmethod
     def _parse_mass_data(mass_data: str) -> Tuple:

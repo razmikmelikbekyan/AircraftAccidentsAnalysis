@@ -26,6 +26,7 @@ class Accident(scrapy.Item):
     passengers_fatalities = scrapy.Field()
     total_occupants = scrapy.Field()
     total_fatalities = scrapy.Field()
+    ground_fatalities = scrapy.Field()
     phase = scrapy.Field()
     nature = scrapy.Field()
     aircraft_damage = scrapy.Field()
@@ -40,10 +41,11 @@ class Accident(scrapy.Item):
 
 
 class Aircraft(scrapy.Item):
-    aircraft_type = scrapy.Field()
+    aircraft_main_model = scrapy.Field()
     manufacturer = scrapy.Field()
     country = scrapy.Field()
     icao_type_designator = scrapy.Field()
+    series = scrapy.Field()
     first_flight = scrapy.Field()
     production_ended = scrapy.Field()
     production_total = scrapy.Field()
