@@ -1,5 +1,5 @@
 import re
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple
 
 import accidents_extraction.items as items
 import scrapy
@@ -73,6 +73,7 @@ class AircraftSpider(CrawlSpider):
     def _correct_str(x: str) -> str:
         if not x:
             return None
+        x = x.replace('é', 'e')
         x = x.encode("ascii", errors="ignore").decode()
         x = re.sub(r' +', ' ', x.rstrip()).strip()
         return x
@@ -80,10 +81,9 @@ class AircraftSpider(CrawlSpider):
     def _process_aircraft_data(self, data: Dict):
         aircraft = items.Aircraft()
         aircraft['aircraft_main_model'] = data['aircraft_main_model']
-        aircraft['manufacturer'] = data.get('manufacturer')
+        aircraft['manufacturer'] = data['manufacturer']
         aircraft['country'] = data.get('country')
         aircraft['icao_type_designator'] = data.get('icao_type_designator')
-        aircraft['series'] = self._parse_series(aircraft['manufacturer'], data.get('series'))
         aircraft['first_flight'] = self._parse_first_flight(data.get('first_flight'))
         aircraft['production_ended'] = self._parse_production_ended(data.get('production_ended'))
         aircraft['production_total'] = self._parse_production_total(data.get('production_total'))
@@ -133,18 +133,6 @@ class AircraftSpider(CrawlSpider):
                 return int(production_total)
             else:
                 return production_total
-
-    @classmethod
-    def _parse_series(cls, manufacturer, series_data: List[str]) -> str:
-        if not series_data:
-            return
-
-        if len(series_data) == 1:
-            series_data = [f'{manufacturer} {x}' for x in series_data[0].split(',')]
-        else:
-            # series_data = [x for x in series_data if ':' in x]
-            series_data = [f'{manufacturer} {x.split(":")[0]}' for x in series_data if ':' in x]
-        return '$$'.join([cls._correct_str(x) for x in series_data])
 
     @staticmethod
     def _parse_mass_data(mass_data: str) -> Tuple:

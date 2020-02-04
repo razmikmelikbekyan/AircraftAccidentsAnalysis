@@ -34,7 +34,7 @@ class AccidentsSpider(CrawlSpider):
                 restrict_xpaths='//*[@id="contentcolumn"]/div/p[3]/a',
                 restrict_css='a[href*=Year]',
                 deny=r'.+lang=[a-z]{2}$',
-                # process_value=lambda x: x if '2001' in x else None
+                # process_value=lambda x: x if '2015' in x else None
             ),
             callback='parse_accidents_for_year',
             follow=True,
@@ -55,15 +55,10 @@ class AccidentsSpider(CrawlSpider):
             logger.info(f'For year={year} {len(urls)} accidents have been found.')
 
         for url in urls:
-            url = urljoin(self.base_url, url)
-
-            request = scrapy.Request(
-                urljoin(self.base_url, url),
-                callback=self.parse_accident
-            )
-            yield request
+            yield scrapy.Request(urljoin(self.base_url, url), callback=self.parse_accident)
 
     def parse_accident(self, response):
+        aircraft_url = None
         data = {}
 
         table_rows = response.xpath('//*[@id="contentcolumn"]/div/table//tr')
@@ -72,6 +67,9 @@ class AccidentsSpider(CrawlSpider):
             key = all_text[0][:-1]
             value = self._correct_str(' '.join(all_text[1:]))
             data[key] = value
+            if key == 'Type':
+                aircraft_url = row.css('a::attr(href)').extract_first()
+                aircraft_url = urljoin(self.base_url, aircraft_url)
 
         narrative = response.xpath('///*[@id="contentcolumn"]/div/span[2]')
         narrative = ''.join(narrative.css('*::text').extract())
@@ -80,22 +78,39 @@ class AccidentsSpider(CrawlSpider):
         cause = response.xpath('//*[@id="contentcolumn"]/div/span[3]').css('*::text').extract()
         data['ProbableCause'] = self._correct_str(''.join(cause))
 
-        data = self._process_accident_data(data)
-        if not data:
-            return
-        else:
-            yield data
+        if not aircraft_url:
+            data['aircraft_main_model'] = None
+            return self._process_accident_data(data)
+
+        return scrapy.Request(
+            aircraft_url,
+            callback=self.parse_aircraft_data,
+            meta={'data': data},
+            dont_filter=True,
+        )
+
+    def parse_aircraft_data(self, response):
+        data = response.meta.get('data')
+        try:
+            [model] = response.xpath('//*[@id="inside"]/div[4]').css('*::text').getall()
+            data['aircraft_main_model'] = self._correct_str(model)
+        except ValueError:
+            data['aircraft_main_model'] = None
+
+        return self._process_accident_data(data)
 
     def _process_accident_data(self, data: Dict):
-        accident = items.Accident()
         if 'Date' not in data:
             return
+
+        accident = items.Accident()
         accident['status'] = data.get('Status', None)
         accident['time'] = self._parse_time(data.get('Time', None))
         accident['weekday'], accident['day'], accident['month'], accident['year'] = (
             self._parse_date(data['Date'])
         )
         accident['aircraft_type'] = data['Type']
+        accident['aircraft_main_model'] = data['aircraft_main_model']
         accident['operator'] = self._parse_operator(data)
         accident['country'], accident['location'] = self._parse_location(data['Location'])
         accident['phase'] = self._parse_phase(data.get('Phase', 'Unknown'))
@@ -123,6 +138,7 @@ class AccidentsSpider(CrawlSpider):
     def _correct_str(x: str) -> str:
         if not x:
             return
+        x = x.replace('é', 'e')
         x = x.encode("ascii", errors="ignore").decode()
         x = re.sub(r' +', ' ', x.rstrip()).strip()
         return x

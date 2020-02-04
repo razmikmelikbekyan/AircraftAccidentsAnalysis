@@ -34,7 +34,8 @@ class AccidentsExtractionPipeline(object):
             "  `year` SMALLINT,"
             "  `first_flight` SMALLINT,"
             "  `total_airframe_hrs` INT,"
-            "  `aircraft_type` varchar(100) NOT NULL,"
+            "  `aircraft_type` varchar(200) NOT NULL,"
+            "  `aircraft_main_model` varchar(200),"
             "  `operator` varchar(100),"
             "  `country` varchar(1000),"
             "  `location` varchar(1000),"
@@ -73,6 +74,9 @@ class AccidentsExtractionPipeline(object):
 
     # Insert data records into the database (one item at a time)
     def process_item(self, item, spider):
+        if not item:
+            return
+
         keys, values = zip(*item.items())
         keys, values = list(keys), list(values)
 
@@ -111,7 +115,6 @@ class AircraftExtractionPipeline(object):
             f"CREATE TABLE `{self.table_name}` ("
             "  `aircraft_main_model` varchar(200) NOT NULL,"
             "  `manufacturer` varchar(200),"
-            "  `series` varchar(1500),"
             "  `country` varchar(500),"
             "  `icao_type_designator` varchar(500),"
             "  `first_flight` SMALLINT,"
