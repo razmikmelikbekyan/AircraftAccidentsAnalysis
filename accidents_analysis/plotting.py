@@ -53,7 +53,7 @@ def plot_countplot(df: pd.DataFrame,
 def plot_aggregated_barplot(df: pd.DataFrame,
                             x_column: str,
                             y_column: str,
-                            aggregation_type: str,
+                            aggregation_type: str = None,
                             hue_column: str = None,
                             hue_dict: Dict = None,
                             color: str or List[str] = 'darkorange',
@@ -62,6 +62,7 @@ def plot_aggregated_barplot(df: pd.DataFrame,
                             ylims: Tuple = None,
                             ticks_rotation: int = 90,
                             ticks_fontsize: int = 10,
+                            annotation_precision: int = 0,
                             output_path: str = None):
     """Plots aggregated numerical column versus categories."""
 
@@ -78,10 +79,13 @@ def plot_aggregated_barplot(df: pd.DataFrame,
 
     if hue_column:
         df_aggregated = hue_aggregation()
-    else:
+        title = title if title else f'{aggregation_type} {y_column} by {x_column}'
+    elif aggregation_type:
         df_aggregated = df.groupby(x_column).agg({y_column: aggregation_type}).reset_index()
-
-    title = title if title else f'{aggregation_type} {y_column} by {x_column}'
+        title = title if title else f'{aggregation_type} {y_column} by {x_column}'
+    else:
+        df_aggregated = df
+        title = title if title else f'{y_column} by {x_column}'
 
     plt.figure(figsize=figsize)
     plt.title(title, fontweight='bold', fontsize=16)
@@ -97,7 +101,7 @@ def plot_aggregated_barplot(df: pd.DataFrame,
 
     for p in splot.patches:
         splot.annotate(
-            f'{p.get_height():,.0f}',
+            f'{p.get_height():,.{annotation_precision}f}',
             (p.get_x() + p.get_width() / 2., p.get_height()),
             ha='center',
             va='center' if ticks_rotation == 0 else 'bottom',
