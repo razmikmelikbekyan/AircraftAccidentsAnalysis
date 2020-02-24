@@ -261,3 +261,36 @@ def plot_distplot(df: pd.DataFrame,
     if output_path:
         plt.savefig(output_path, bbox_inches='tight')
     plt.show()
+
+
+def plot_category_split_plot(df: pd.DataFrame,
+                             figsize: Tuple[int, int] = (12, 6),
+                             title: str = None,
+                             x_label: str = None,
+                             ticks_rotation: int = 90,
+                             ticks_fontsize: int = 12,
+                             output_path: str = None):
+    fig = plt.figure(figsize=figsize)
+    ax = fig.add_subplot(111)
+
+    if title:
+        plt.title(title, fontsize=14, fontweight='bold')
+    df.plot(ax=ax, kind='bar', stacked=True, rot=0,
+            color=sns.color_palette('tab10', n_colors=10))
+    vals = ax.get_yticks()
+    ax.set_yticklabels(['{:3.0f}%'.format(x * 100) for x in vals])
+    ax.set_axisbelow(True)
+    sns.despine()
+    plt.legend(loc="upper right", bbox_to_anchor=(1.3, 1))
+    plt.xticks(rotation=ticks_rotation, fontsize=12, fontweight='bold')
+    plt.yticks(fontsize=12, fontweight='bold')
+    if x_label:
+        plt.xlabel(x_label, fontsize=ticks_fontsize, fontweight='bold')
+    plt.ylabel('Percentage', fontsize=12, fontweight='bold')
+
+    plt.grid(True, axis='y', linestyle='--', color='orange')
+    plt.tight_layout()
+    if output_path:
+        plt.savefig(output_path, bbox_inches='tight')
+
+    plt.show()
